@@ -1,4 +1,8 @@
 import "./tasks/register-project";
+import "./tasks/set-device-contract";
+import "./tasks/add-device-minter";
+import "./tasks/mint-device";
+
 import * as dotenv from 'dotenv';
 import { HardhatUserConfig } from 'hardhat/config';
 import "./tasks/register-project";
