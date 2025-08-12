@@ -30,7 +30,7 @@ contract ERC6551RegistryMock is IERC6551Registry {
         address acc = _accounts[key];
         if (acc == address(0)) {
             // No initData in this interface; we just deploy a fresh HBAccount.
-            HBAccount wallet = new HBAccount(chainId, tokenContract, tokenId);
+            HBAccount wallet = new HBAccount();
             acc = address(wallet);
             _accounts[key] = acc;
             emit ERC6551AccountCreated(acc, implementation, salt, chainId, tokenContract, tokenId);
