@@ -55,6 +55,11 @@ contract ioIDStore is IioIDStore, OwnableUpgradeable {
     function changeDeviceContract(uint256 _projectId, address _contract) external override onlyOwner {
         require(deviceContractProject[_contract] == 0, "contract setted");
 
+        address _oldContract = projectDeviceContract[_projectId];
+        if (_oldContract != address(0)) {
+            delete deviceContractProject[_oldContract];
+        }
+
         projectDeviceContract[_projectId] = _contract;
         deviceContractProject[_contract] = _projectId;
         emit SetDeviceContract(_projectId, _contract);
