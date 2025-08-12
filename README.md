@@ -28,3 +28,10 @@ npx hardhat test test/flow-direct-register.test.ts
 
 > Tests use **local ERC‑6551 mocks** purely for fast local runs. In production, point to the **canonical ERC‑6551 registry** on your target chain.
 
+## Integrating your devices
+
+See [INTEGRATE.md](./INTEGRATE.md)
+
+## Deploying ioID
+
+See [DEPLOY.md](./DEPLOY.md)
