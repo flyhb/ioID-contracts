@@ -1,12 +1,18 @@
+import "./tasks/register-project";
+import "./tasks/set-device-contract";
+import "./tasks/add-device-minter";
+import "./tasks/mint-device";
+
 import * as dotenv from 'dotenv';
 import { HardhatUserConfig } from 'hardhat/config';
+import "./tasks/register-project";
 import '@nomicfoundation/hardhat-toolbox';
 import '@openzeppelin/hardhat-upgrades';
 import '@nomiclabs/hardhat-truffle5';
 
 dotenv.config();
 
-const PRIVATE_KEY = process.env.PRIVATE_KEY;
+const PRIVATE_KEY = process.env.BERA_PRIVATE_KEY;
 const accounts = PRIVATE_KEY !== undefined ? [PRIVATE_KEY] : [];
 
 const config: HardhatUserConfig = {
@@ -21,8 +27,8 @@ const config: HardhatUserConfig = {
       url: 'https://babel-api.mainnet.iotex.io/',
       accounts: accounts,
     },
-    testnet: {
-      url: 'https://babel-api.testnet.iotex.io/',
+    berachain: {
+      url: 'https://bepolia.rpc.berachain.com',
       accounts: accounts,
     },
   },
