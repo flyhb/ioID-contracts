@@ -10,7 +10,7 @@ npm install
 ## Add your network to Hardhat (e.g. Ethereum Sepolia)
 
 In `hardhat.config.ts`, add this under `networks`:
-```json
+```js
 ethereum-sepolia: {
       url: ' https://sepolia.infura.io/v3/',
       accounts: accounts,
