@@ -43,7 +43,7 @@ contract ioIDStore is IioIDStore, OwnableUpgradeable {
     }
 
     function setDeviceContract(uint256 _projectId, address _contract) external override {
-        require(IERC721(project).ownerOf(_projectId) == msg.sender, "invald project owner");
+        require(IERC721(project).ownerOf(_projectId) == msg.sender, "invalid project owner");
         require(projectDeviceContract[_projectId] == address(0), "project setted");
         require(deviceContractProject[_contract] == 0, "contract setted");
 
@@ -104,11 +104,11 @@ contract ioIDStore is IioIDStore, OwnableUpgradeable {
         emit SetIoIDRegistry(_ioIDRegistry);
     }
 
-    function withdraw(address[] calldata _recipicents, uint256[] calldata _amounts) external onlyOwner {
-        require(_recipicents.length == _amounts.length, "invalid request");
+    function withdraw(address[] calldata _recipients, uint256[] calldata _amounts) external onlyOwner {
+        require(_recipients.length == _amounts.length, "invalid request");
 
-        for (uint256 i = 0; i < _recipicents.length; i++) {
-            (bool success, ) = _recipicents[i].call{value: _amounts[i]}("");
+        for (uint256 i = 0; i < _recipients.length; i++) {
+            (bool success, ) = _recipients[i].call{value: _amounts[i]}("");
             require(success, "transfer fail");
         }
     }
