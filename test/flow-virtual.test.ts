@@ -10,15 +10,16 @@ import {
 } from '../typechain-types';
 import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers';
 import { Signer, getBytes, keccak256, solidityPacked } from 'ethers';
-import { TokenboundClient } from '@tokenbound/sdk';
+// We use a local ERC‑6551 registry mock and HBAccount implementation for testing
 
-describe('ioID pebble tests', function () {
+describe('ioID My Device Tests', function () {
   let deployer, owner: HardhatEthersSigner;
   let verifier: Signer;
   let proxy: VerifyingProxy;
   let ioIDStore: IoIDStore;
   let ioID: IoID;
   let ioIDRegistry: IoIDRegistry;
+  let chainId: number;
 
   before(async () => {
     [deployer, owner] = await ethers.getSigners();
@@ -33,11 +34,23 @@ describe('ioID pebble tests', function () {
     ioIDStore = await ethers.deployContract('ioIDStore');
     await ioIDStore.initialize(project.target, ethers.parseEther('1.0'));
 
+    // Determine the local chain ID for EIP‑712 signatures and HBAccount construction
+    const net = await ethers.provider.getNetwork();
+    chainId = Number(net.chainId);
+
+    // Deploy a mock ERC‑6551 registry and a HBAccount implementation for the local network
+    const registry = await ethers.deployContract('ERC6551RegistryMock');
+    // Deploy a dummy ERC721 and initialize it so the HBAccount constructor receives a non‑zero token contract
+    const dummyErc721 = await ethers.deployContract('DeviceNFT');
+    await dummyErc721.initialize('Dummy NFT', 'DNFT');
+    // Deploy a HBAccount implementation bound to a dummy NFT (chainId, tokenContract, tokenId)
+    const accountImpl = await ethers.deployContract('HBAccount', [chainId, dummyErc721.target, 1n]);
+
     ioID = await ethers.deployContract('ioID');
     await ioID.initialize(
       deployer.address, // minter
-      '0x000000006551c19487814612e58FE06813775758', // wallet registry
-      '0x1d1C779932271e9Dc683d5373E84Fa4239F2b3fb', // wallet implementation
+      registry.target, // wallet registry
+      accountImpl.target, // wallet implementation (unused by mock registry)
       'ioID',
       'ioID',
     );
@@ -48,14 +61,41 @@ describe('ioID pebble tests', function () {
     await ioIDStore.setIoIDRegistry(ioIDRegistry.target);
     await ioID.setMinter(ioIDRegistry.target);
 
+    // Deploy the VerifyingProxy implementation. This proxy requires the ioIDStore,
+    // projectRegistry and a DeviceNFT implementation in its constructor. The
+    // resulting implementation address is passed into UniversalFactory so that
+    // each new proxy uses the correct implementation.
+    const deviceNFTImplementation = await ethers.deployContract('DeviceNFT');
+    const proxyImplementation = await ethers.deployContract('VerifyingProxy', [
+      ioIDStore.target,
+      projectRegistry.target,
+      deviceNFTImplementation.target,
+    ]);
+
+    // The UniversalFactory only takes a single parameter: the proxy implementation
+    // address. Passing extra parameters will cause a constructor argument mismatch.
     const verifyingProxyFactory = await ethers.getContractFactory('VerifyingProxy');
-    const factory = await ethers.deployContract('UniversalFactory', [ioIDStore.target, projectRegistry.target]);
-    const tx = await factory.create(1, verifier.getAddress(), 'DeNet', 'DeNet Device NFT', 'DNFT', 10);
-    const receipt = await tx.wait();
-    for (let i = 0; i < receipt!.logs.length; i++) {
-      const log = receipt!.logs[i];
-      if (log.topics[0] == '0x944661ed150e69c33316bf899f80879602cc18929538a726d96c30bd7c9a7fc8') {
+    const factory = await ethers.deployContract('UniversalFactory', [proxyImplementation.target]);
+
+    // Create a new verifying proxy via the factory. We provide the type, verifier
+    // address, project name, device name/symbol and amount. A payment equal to
+    // 10 ether (1.0 per device) must be sent to mint 10 devices.
+    const createTx = await factory.create(
+      1,
+      verifier.getAddress(),
+      'DeNet',
+      'DeNet Device NFT',
+      'DNFT',
+      10,
+      { value: ethers.parseEther('1.0') * 10n }
+    );
+    const receipt = await createTx.wait();
+    // Extract the created proxy address from the event logs. The event
+    // signature is deterministic and matches the VerifyingProxy's CreateProxy event.
+    for (const log of receipt!.logs) {
+      if (log.topics[0] === '0x944661ed150e69c33316bf899f80879602cc18929538a726d96c30bd7c9a7fc8') {
         proxy = verifyingProxyFactory.attach(log.args[0]) as VerifyingProxy;
+        break;
       }
     }
   });
@@ -65,7 +105,7 @@ describe('ioID pebble tests', function () {
     const domain = {
       name: 'ioIDRegistry',
       version: '1',
-      chainId: 4690,
+      chainId: chainId,
       verifyingContract: ioIDRegistry.target,
     };
     const types = {
@@ -86,7 +126,7 @@ describe('ioID pebble tests', function () {
     const projectId = await proxy.projectId();
 
     // request verify service with: chainid, owner, device
-    const verifyMessage = solidityPacked(['uint256', 'address', 'address'], [4690, owner.address, device.address]);
+    const verifyMessage = solidityPacked(['uint256', 'address', 'address'], [chainId, owner.address, device.address]);
     const verifySignature = await verifier.signMessage(getBytes(verifyMessage));
 
     expect(await ioID.projectDeviceCount(projectId)).to.equal(0);
@@ -125,36 +165,16 @@ describe('ioID pebble tests', function () {
     });
     expect(await ethers.provider.getBalance(wallet)).to.equal(ethers.parseEther('1.0'));
 
-    // @ts-ignore
-    const tokenboundClient = new TokenboundClient({
-      chain: {
-        id: 4690,
-        name: 'IoTeX Testnet',
-        network: 'testnet',
-        rpcUrls: {
-          default: {
-            http: ['http://127.0.0.1:8545'],
-          },
-          public: {
-            http: ['http://127.0.0.1:8545'],
-          },
-        },
-        nativeCurrency: {
-          name: 'IoTeX',
-          symbol: 'IOTX',
-          decimals: 18,
-        },
-      },
-      // registryAddress: '0x000000006551c19487814612e58FE06813775758',
-      // implementationAddress: '0x1d1C779932271e9Dc683d5373E84Fa4239F2b3fb',
-      signer: owner,
-    });
-    const executedCall = await tokenboundClient.transferETH({
-      account: wallet,
-      recipientAddress: deployer.address,
-      amount: 0.8,
-    });
-    console.log(`${wallet} transfer tx: ${executedCall}`);
+    // Instead of using the external Tokenbound SDK, directly call our HBAccount
+    // implementation to transfer ETH from the account to the recipient. The
+    // account owner must sign the call.
+    const hb = await ethers.getContractAt('HBAccount', wallet);
+    await hb.connect(owner).executeCall(
+      deployer.address,
+      ethers.parseEther('0.8'),
+      '0x'
+    );
+    // After the call, the wallet should hold 0.2 ETH (1.0 – 0.8)
     expect(await ethers.provider.getBalance(wallet)).to.equal(ethers.parseEther('0.2'));
   });
 });

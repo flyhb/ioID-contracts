@@ -1,18 +1,28 @@
 import { ethers, upgrades } from 'hardhat';
 
 async function main() {
+  // ioID token price must be provided via the IOID_PRICE env var. Without
+  // this the deployment script cannot determine the minting cost. Exit
+  // early with a helpful message if it's missing.
   if (!process.env.IOID_PRICE) {
-    console.log(`Please provide wallet implementation`);
+    console.log(`Please provide IOID_PRICE`);
     return;
   }
-  if (!process.env.WALLET_REGISTRY) {
-    console.log(`Please provide wallet registry address`);
-    return;
-  }
+  // Use the canonical ERC‑6551 registry on Berachain Bepolia by default. The
+  // deployed registry lives at a deterministic address across all chains. See
+  // https://tokenbound.org for details. Fallback to the provided
+  // WALLET_REGISTRY environment variable if set.
+  const DEFAULT_REGISTRY = '0x000000006551c19487814612e58FE06813775758';
+  const walletRegistry = process.env.WALLET_REGISTRY || DEFAULT_REGISTRY;
+
+  // The ERC‑6551 account implementation address must also be set via the
+  // WALLET_IMPLEMENTATION env var. Without this we cannot initialize
+  // ioID contracts correctly.
   if (!process.env.WALLET_IMPLEMENTATION) {
-    console.log(`Please provide wallet implementation`);
+    console.log(`Please provide WALLET_IMPLEMENTATION`);
     return;
   }
+  const walletImplementation = process.env.WALLET_IMPLEMENTATION;
 
   const [deployer] = await ethers.getSigners();
 
@@ -47,7 +57,7 @@ async function main() {
 
   const ioID = await upgrades.deployProxy(
     await ethers.getContractFactory('ioID'),
-    [deployer.address, process.env.WALLET_REGISTRY, process.env.WALLET_IMPLEMENTATION, 'ioID device NFT', 'IDN'],
+    [deployer.address, walletRegistry, walletImplementation, 'ioID device NFT', 'IDN'],
     {
       initializer: 'initialize',
     },

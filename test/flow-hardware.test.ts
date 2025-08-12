@@ -6,7 +6,7 @@ import { Signer, getBytes, keccak256, solidityPacked } from 'ethers';
 import { TokenboundClient } from '@tokenbound/sdk';
 import { DeviceNFT } from '../typechain-types/contracts/DeviceNFT.sol';
 
-describe('ioID pebble tests', function () {
+describe('ioID My Device Tests', function () {
   let deployer: HardhatEthersSigner;
   let owner: HardhatEthersSigner;
   let newOwner: HardhatEthersSigner;
@@ -62,7 +62,7 @@ describe('ioID pebble tests', function () {
 
     const verifyingProxyFactory = await ethers.getContractFactory('VerifyingProxy');
     const factory = await ethers.deployContract('UniversalFactory', [proxyImplementation.target]);
-    const tx = await factory.create(0, verifier.getAddress(), 'Pebble', 'Pebble Device NFT', 'PNFT', 10, {
+    const tx = await factory.create(0, verifier.getAddress(), 'MyDeviceName', 'My Device NFT', 'DNFT', 10, {
       value: ethers.parseEther('1.0') * BigInt(10),
     });
     const receipt = await tx.wait();
