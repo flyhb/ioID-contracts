@@ -35,8 +35,11 @@ RPC_URL_BEPO=https://bepolia.rpc.berachain.com
 # --- ioID Deploy Params ---
 IOID_PRICE=0.01
 
-# ERC-6551 (Tokenbound) canonical contracts on Bepolia
+# ERC-6551 (Tokenbound) registry, defaults to canonical address
 WALLET_REGISTRY=0x000000006551c19487814612e58FE06813775758
+# ERC-6551 (Tokenbound) wallet implemenation
+# Run npx hardhat run scripts/deploy-wallet.ts to deploy mock/HBWallet.sol example
+# Defaults to canonical address
 WALLET_IMPLEMENTATION=0x55266d75D1a14E4572138116aF39863Ed6596E7F
 
 # --- Optional: explorer verification (if supported) ---
@@ -52,7 +55,7 @@ npx hardhat compile
 This runs `scripts/deploy.ts`, wires everything up (Project, ProjectRegistry, ioIDStore, ioID, ioIDRegistry), and outputs `chain-name.md` under `chain-deployments`:
 
 ```sh
-npx hardhat run scripts/deploy.ts --network bepolia
+npx hardhat run scripts/deploy.ts --network ethereum-sepolia
 ```
 
 # Optional: Deploy factory/proxy for centralized onboarding
